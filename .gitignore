@@ -91,9 +91,14 @@ ipython_config.py
 ShapeGenerator_env/
 shapegen_environment.yml
 
-
 # Ignore .DS_Store
 .DS_Store
+
+# Ignore Generated Models
+*.stl 
+*.dfx
+*.STEP
+
 
 # pipenv
 #   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
