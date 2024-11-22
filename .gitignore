@@ -89,6 +89,8 @@ ipython_config.py
 
 # Ignore Virtual Environment
 ShapeGenerator_env/
+shapegen_environment.yml
+
 
 # Ignore .DS_Store
 .DS_Store
