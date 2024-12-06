@@ -94,6 +94,9 @@ shapegen_environment.yml
 # Ignore .DS_Store
 .DS_Store
 
+# Ignore Images
+*.png
+
 # Ignore Generated Models
 *.stl 
 *.dfx
