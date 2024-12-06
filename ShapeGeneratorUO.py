@@ -437,7 +437,7 @@ def create_3d_model(cross_section_points, outer_max_y):
     cap = cq.Workplane('XZ').circle(revolve_offset).extrude(cap_thickness).translate((0, outer_max_y, 0))
 
     # Combine the profile and cap
-    final = profile.union(cap)
+    final = profile + cap
 
     return final
 
@@ -518,45 +518,50 @@ def create_base(outer_max_x, outer_min_x, outer_max_y):
         .translate((0, -(base_internal_height - base_plate_height - thickness) + 2, 0))
     )
 
-    base = base0.union(base1)
+    base = base0 + base1
 
     return base
 
 def combine_and_export(final, base):
     # Combine the final cross-section profile and the base
-    base_and_final = final.union(base)
+    base_and_final = final + base
 
-    # Export the combined model as STL file
+    # Export the final model as STL file
     base_and_final.export("full_shape.stl")
     print("Model exported as 'full_shape.stl'")
 
+def export_model(final):
+    # Export the final model as STL file
+    final.export("final_model.stl")
+    print("Model exported as 'final_model.stl'")
+
 def main():
-    # Step 1: Validate parameters
+    # Validate parameters
     validate_parameters()
 
-    # Step 2: Compute x_increments and y_positions
+    # Compute x_increments and y_positions
     x_increments, y_positions = compute_x_increments_and_y_positions()
 
-    # Steo 3a: Generate initial/cap curve
+    # Generate initial/cap curve
     all_control_points, all_curve_points, control_points_idx, control_points_idx_names, curve_points_idx, curve_points_idx_names, end_x0, end_y0 = generate_cap_curve(start_x, start_y, cap_height, cap_length, weights0, degree0)
 
-    # Step 3b: Generate curves
+    # Generate curves
     all_control_points, all_curve_points, control_points_idx, control_points_idx_names, curve_points_idx, curve_points_idx_names = generate_curves(x_increments, y_positions, all_control_points, all_curve_points, 
                     control_points_idx, control_points_idx_names, curve_points_idx, curve_points_idx_names, end_x0, end_y0)
 
-    # Step 4: Plot curves (optional)
+    # Plot curves (optional)
     plot_curves(all_control_points, all_curve_points)
 
-    # Step 5: Process outer points
+    # Process outer points
     outer_points, outer_min_x, outer_max_x, outer_max_y = process_outer_points(all_curve_points)
 
-    # Step 6: Generate variable thickness control points
+    # Generate variable thickness control points
     vt_control_points = generate_vt_control_points(all_control_points, control_points_idx)
 
-    # Step 7: Calculate normals
+    # Calculate normals
     normals = calculate_normals(outer_points)
 
-    # Step 8: Calculate thickness profiles
+    # Calculate thickness profiles
     # Define thicknesses at each control point for each curve segment
     all_thicknesses = [
         [1, 1],             # For cap curve (curve0)
@@ -627,20 +632,20 @@ def main():
     # Append the last thickness
     point_thicknesses.append(end_thickness)
 
-    # Step 9: Generate inner profile
+    # Generate inner profile
     inner_points = generate_inner_profile(outer_points, normals, point_thicknesses, outer_min_x, outer_max_x)
 
-    # Step 10: Generate cross-section
+    # Generate cross-section
     cross_section_points = generate_cross_section(outer_points, inner_points)
 
-    # Step 11: Create 3D model
+    # Create 3D model
     final = create_3d_model(cross_section_points, outer_max_y)
 
-    # Step 12: Create base
+    # Create base
     base = create_base(outer_max_x, outer_min_x, outer_max_y)
 
-    # Step 13: Combine and export model
-    combine_and_export(final, base)
+    # Export Final model
+    export_model(final)
 
 if __name__ == '__main__':
     main()
