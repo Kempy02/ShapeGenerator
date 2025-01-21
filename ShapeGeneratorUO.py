@@ -5,6 +5,11 @@ import cadquery as cq
 from cadquery import exporters
 import math
 
+# Global boolean control parameters
+plot_curve_flag = False
+create_base_flag = False
+export_base_flag = False
+
 # Global Parameters (These can remain at the top)
 n_curves = 5  # Number of sequential NURBS curves
 
@@ -550,7 +555,8 @@ def main():
                     control_points_idx, control_points_idx_names, curve_points_idx, curve_points_idx_names, end_x0, end_y0)
 
     # Plot curves (optional)
-    plot_curves(all_control_points, all_curve_points)
+    if plot_curve_flag:
+        plot_curves(all_control_points, all_curve_points)
 
     # Process outer points
     outer_points, outer_min_x, outer_max_x, outer_max_y = process_outer_points(all_curve_points)
@@ -642,10 +648,14 @@ def main():
     final = create_3d_model(cross_section_points, outer_max_y)
 
     # Create base
-    base = create_base(outer_max_x, outer_min_x, outer_max_y)
+    if create_base_flag:
+        base = create_base(outer_max_x, outer_min_x, outer_max_y)
 
     # Export Final model
-    export_model(final)
+    if export_base_flag:
+        combine_and_export(final, base)
+    else:
+        export_model(final)
 
 if __name__ == '__main__':
     main()
