@@ -1,0 +1,7 @@
+Prototype ID,Factor Varied,Factor Level,Pressure (kPa),Force (N),Extension (mm),Radial Expansion (mm),Test Notes/Observations
+A1,Thickness,0.5,20,0.0,0.0,0.0,Test Note 1
+A2,Thickness,1.0,20,0.0,0.0,0.0,Test Note 2
+A3,Thickness,2.0,20,0.0,0.0,0.0,Test Note 3
+B1,Amplitude,0.5,20,0.0,0.0,0.0,Test Note 1
+B2,Amplitude,1.0,20,0.0,0.0,0.0,Test Note 2
+B3,Amplitude,2.0,20,0.0,0.0,0.0,Test Note 3
