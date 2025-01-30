@@ -554,6 +554,7 @@ def create_2d_cross_section(cross_section_points):
     twoD_cross_section = (cq.Workplane("XY")
                .polyline(cross_section_points)
                .close()
+               .extrude(0.1)
               )
     return twoD_cross_section
 
@@ -796,7 +797,7 @@ def export_model(final_obj):
     final_obj.export("final_model.stl")
     print("Model exported as 'final_model.stl'")
 
-# ============ MAIN ENTRY POINT ============
+# ============ MAIN ============
 
 def main():
 
@@ -897,7 +898,7 @@ def main():
     if export_crossSection_flag:
         twoD_cross_section = create_2d_crossSection(cross_section_points)
         threeD_cross_section = create_3d_crossSection(cross_section_points, outer_max_y)
-        export(twoD_cross_section, "cross_section_2D", export_type='stl')
+        export(twoD_cross_section, "cross_section_2D")
         export(threeD_cross_section, "cross_section_3D")
 
 if __name__ == "__main__":
