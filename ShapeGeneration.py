@@ -4,6 +4,7 @@ from geomdl import NURBS
 import cadquery as cq
 from cadquery import exporters
 import math
+import os
 
 # ============ GLOBAL BOOLEAN CONTROL PARAMETERS ============
 plot_curve_flag   = False  # Whether to plot the 2D NURBS curves for debugging
@@ -546,6 +547,16 @@ def generate_cross_section(outer_points, inner_points):
     shifted = [(x - first_x, y) for (x,y) in cross_section_points]
     return shifted
 
+def create_2d_cross_section(cross_section_points):
+    """
+    Create a 2D cross‐section from the combined inner/outer points.
+    """
+    twoD_cross_section = (cq.Workplane("XY")
+               .polyline(cross_section_points)
+               .close()
+              )
+    return twoD_cross_section
+
 def create_3d_model(cross_section_points, outer_max_y):
     """
     Revolve the 2D cross_section around the Y axis to form the actuator body,
@@ -650,7 +661,18 @@ def create_base(outer_max_x, outer_min_x, outer_max_y):
     base = base0 + base1
     return base
 
-def export_crossSection(cross_section_points, outer_max_y):
+def create_2d_crossSection(cross_section_points):
+    """
+    Create a 2D cross‐section from the combined inner/outer points.
+    """
+    twoD_cross_section = (cq.Workplane("XY")
+               .polyline(cross_section_points)
+               .close()
+              )
+    
+    return twoD_cross_section
+
+def create_3d_crossSection(cross_section_points, outer_max_y):
     """
     Revolve the 2D cross_section 180 degrees around the Y axis to form the actuator body,
     then add a top 'cap'.
@@ -673,14 +695,102 @@ def export_crossSection(cross_section_points, outer_max_y):
            .translate((0, outer_max_y, 0))
           )
 
-    final = profile + cap
-    final.export("cross_section.stl")
-    print("3D Cross‐section exported as 'cross_section.stl'")
+    threeD_cross_section = profile + cap
 
-def combine_and_export(final_obj, base_obj):
+    return threeD_cross_section
+
+def export(model, title, export_type='stl', directory=None, overwrite=False):
+    """
+    Exports the given model to a file in the specified format with the given title.
+
+    Parameters:
+    - model: The 3D model object to be exported. It must have an 'export' method.
+    - title (str): The desired name for the exported file (without the extension).
+    - export_type (str, optional): The format to export the model. Supported types include 'stl', 'step', 'dxf'.
+                                   Defaults to 'stl'.
+    - directory (str, optional): The directory where the file will be saved.
+                                 Defaults to the current script's directory.
+    - overwrite (bool, optional): If True, existing files with the same name will be overwritten without confirmation.
+                                  Defaults to False.
+
+    Supported Export Types:
+    - 'stl'  : Stereolithography
+    - 'step' : STEP (Standard for the Exchange of Product Data)
+    - 'dxf'  : Drawing Exchange Format
+
+    Example:
+    export(model_obj, "custom_model_name", export_type="step", directory="/path/to/save", overwrite=True)
+    """
+
+    # Define supported export types and their corresponding file extensions
+    supported_types = {
+        'stl': '.stl',
+        'step': '.step',
+        'dxf': '.dxf'
+    }
+
+    # Normalize the export_type to lowercase to ensure case-insensitive matching
+    export_type = export_type.lower()
+
+    # Validate the export_type
+    if export_type not in supported_types:
+        print(f"Error: Unsupported export type '{export_type}'. Supported types are: {', '.join(supported_types.keys())}.")
+        return
+
+    # Ensure the title does not already end with the correct extension
+    extension = supported_types[export_type]
+    if title.lower().endswith(extension):
+        title = title[:-len(extension)]
+
+    # Construct the filename by appending the appropriate extension
+    filename = f"{title}{extension}"
+
+    # Determine the default directory if none is provided
+    if directory is None:
+        try:
+            # Get the absolute path of the current script
+            directory = os.path.dirname(os.path.abspath(__file__))
+        except NameError:
+            # __file__ is not defined (e.g., in interactive sessions), fallback to current working directory
+            directory = os.getcwd()
+
+    # If a directory is specified, ensure it exists
+    if directory:
+        if not os.path.isdir(directory):
+            try:
+                os.makedirs(directory)
+                print(f"Directory '{directory}' created as it did not exist.")
+            except Exception as e:
+                print(f"Error: Unable to create directory '{directory}'. Details: {e}")
+                return
+        filepath = os.path.join(directory, filename)
+    else:
+        filepath = filename  # Save in the current working directory
+
+    # Check if the file already exists
+    if os.path.exists(filepath) and not overwrite:
+        response = input(f"File '{filepath}' already exists. Overwrite? (y/n): ").lower()
+        if response != 'y':
+            print("Export canceled by the user.")
+            return
+
+    try:
+        # Export the model to the specified filepath
+        model.export(filepath)
+        print(f"Model exported as '{filepath}'")
+    except AttributeError:
+        print("Error: The provided model does not have an 'export' method.")
+    except IOError as e:
+        print(f"IOError: Failed to write to file '{filepath}'. Details: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+
+
+def combine(final_obj, base_obj):
     combined = final_obj + base_obj
-    combined.export("full_shape.stl")
-    print("Model exported as 'full_shape.stl'")
+
+    return combined
 
 def export_model(final_obj):
     final_obj.export("final_model.stl")
@@ -772,18 +882,23 @@ def main():
     # 9) Create 3D model
     final = create_3d_model(cross_section_points, outer_max_y)
 
-    if export_crossSection_flag:
-        export_crossSection(cross_section_points, outer_max_y)
-
-    # 10) Optional base creation
+    # Optional: Base creation
     if create_base_flag:
         base = create_base(outer_max_x, outer_min_x, outer_max_y)
 
-    # 11) Export
+    # Export Final Model
     if export_base_flag and create_base_flag:
-        combine_and_export(final, base)
+        combined = combine(final, base)
+        export(combined, "final_model_combined")
     else:
-        export_model(final)
+        export(final, "final_model")
+
+    # Optional: Export the cross‐section
+    if export_crossSection_flag:
+        twoD_cross_section = create_2d_crossSection(cross_section_points)
+        threeD_cross_section = create_3d_crossSection(cross_section_points, outer_max_y)
+        export(twoD_cross_section, "cross_section_2D", export_type='stl')
+        export(threeD_cross_section, "cross_section_3D")
 
 if __name__ == "__main__":
     main()

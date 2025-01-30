@@ -99,7 +99,7 @@ shapegen_environment.yml
 
 # Ignore Generated Models
 *.stl 
-*.dfx
+*.dxf
 *.STEP
 
 
