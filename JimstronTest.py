@@ -201,7 +201,7 @@ def log_event(msg):
         return
 
     elapsed = rospy.Time.now() - test_start_time
-    rospy.loginfo(f"[{elapsed:.2f}s] {msg}")
+    rospy.loginfo(f"[{elapsed.to_sec():.2f}s] {msg}")
 
 def find_model_position(force_threshold=2.0, max_travel=100.0, velocity_lim=5.0):
     """
@@ -294,13 +294,14 @@ def pre_test():
     # Do i need to set servo_home as zero for future absolute moves?
     rospy.sleep(2.0)
 
-    # Start camera timelapse
-    camera_1_start_timelapse("my_timelapse_sequence")
-    rospy.loginfo("Camera timelapse started.")
+    # # Start camera timelapse
+    # camera_1_start_timelapse("my_timelapse_sequence")
+    # rospy.loginfo("Camera timelapse started.")
 
     # record the test start time
     test_start_time = rospy.Time.now()
     rospy.loginfo("test_start_time recorded.")
+    rospy.loginfo(f"test_start_time: {test_start_time}")
 
     # find the unactuated model position
     find_model_position(force_threshold=2.0, max_travel=80.0)
@@ -401,11 +402,12 @@ if __name__ == "__main__":
 
         rospy.loginfo("Test Started!")
         test_status_pub_.publish("PRE-TEST")
+        logging_start_()
         pre_test()
   
         test_status_pub_.publish("RUNNING") 
         rospy.wait_for_service('logger/start') # Should be running but to make sure
-        logging_start_()
+        # logging_start_()
         test()
         logging_stop_()
         

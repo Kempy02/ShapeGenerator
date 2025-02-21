@@ -25,7 +25,7 @@ knot_c        = 1
 start_x       = 0
 start_y       = 0
 cap_height    = 5
-cap_length    = 5
+cap_length    = 10
 thickness     = 1
 revolve_offset= thickness
 
