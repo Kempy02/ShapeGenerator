@@ -42,6 +42,10 @@ gpio_data = None
 
 image_msg = None
 
+STOP_FORCE = 2.0
+WAIT_OFFSET = 120.0
+MODEL_EXTENSION = 85.0
+
 ##################################################################################
 #                                    Callbacks
 ##################################################################################
@@ -199,7 +203,7 @@ def log_event(msg):
     elapsed = rospy.Time.now() - test_start_time
     rospy.loginfo(f"[{elapsed:.2f}s] {msg}")
 
-def find_model_position(force_threshold=2.0, max_travel=100.0):
+def find_model_position(force_threshold=2.0, max_travel=100.0, velocity_lim=5.0):
     """
     Move crosshead downward slowly until force >= force_threshold.
     Then store that position in global model_position.
@@ -213,7 +217,7 @@ def find_model_position(force_threshold=2.0, max_travel=100.0):
     model_position = None
 
     # Set (slow) velocity limit
-    servo_set_vel_lim_(1.0)  # 1 mm/s
+    servo_set_vel_lim_(velocity_lim)
     rospy.sleep(0.2)
 
     # Move downward with until force >= threshold
@@ -250,7 +254,8 @@ def valve_on():
     """
     if gpio_data:
         plc_set_("C2", [True])
-        rospy.loginfo("Valve turned ON")
+        # rospy.loginfo("Valve turned ON")
+        log_event("Valve turned ON")
     else:
         rospy.logwarn("No gpio_data available, cannot set valve")
 
@@ -261,6 +266,7 @@ def valve_off():
     if gpio_data:
         plc_set_("C2", [False])
         rospy.loginfo("Valve turned OFF")
+        # log_event("Valve turned OFF")
     else:
         rospy.logwarn("No gpio_data available, cannot set valve")
 
@@ -285,6 +291,7 @@ def pre_test():
 
     rospy.loginfo("Homing the crosshead ...")
     servo_home_()
+    # Do i need to set servo_home as zero for future absolute moves?
     rospy.sleep(2.0)
 
     # Start camera timelapse
@@ -319,11 +326,21 @@ def test():
     # Set velocity limit to: 10 mm/s
     servo_set_vel_lim_(10.0)
 
-    # Move absolute to -50 mm from home
-    rospy.loginfo("Moving crosshead to -50 mm ...")
-    servo_absolute_move_(-50.0)
-    if not wait(abs_limit_force, 10.0):  # stop if force exceeds: 10 N
-        return
+    # Move to test position if set
+    if model_position is not None:
+        # Move to test position
+        test_position = model_position + MODEL_EXTENSION
+        rospy.loginfo(f"Moving to model position: {test_position:.2f} mm ...")
+        servo_absolute_move_(test_position)
+        if not wait(abs_limit_force, STOP_FORCE):
+            return
+    else:
+        rospy.logwarn("Model position not set. Skipping model position move.")
+        # Move absolute to -50 mm from home
+        rospy.loginfo("Moving crosshead to -50 mm ...")
+        servo_absolute_move_(-50.0)
+        if not wait(abs_limit_force, STOP_FORCE): 
+            return
 
     # Turn the valve on for inflation
     valve_on()
@@ -337,10 +354,20 @@ def test():
     valve_off()
     rospy.sleep(1.0)
 
-    # Move crosshead back up to -10 mm
-    rospy.loginfo("Moving crosshead to -10 mm ...")
-    servo_absolute_move_(-10.0)
-    wait(abs_limit_force, 100.0)
+    # Move to 100mm above model position if model_position is set
+    if model_position is not None:
+        # Move to 100mm above model position
+        wait_position = model_position + WAIT_OFFSET
+        rospy.loginfo(f"Moving to {wait_position:.2f} mm ...")
+        servo_absolute_move_(wait_position)
+        if not wait(abs_limit_force, STOP_FORCE):
+            return
+    else:
+        # Move absolute to -10 mm from home
+        rospy.loginfo("Moving crosshead to -10 mm ...")
+        servo_absolute_move_(-10.0)
+        if not wait(abs_limit_force, STOP_FORCE):
+            return
 
 
 def post_test():
@@ -354,7 +381,7 @@ def post_test():
 
     rospy.loginfo("Moving crosshead back to home (0 mm) ...")
     servo_absolute_move_(0.0)
-    wait(abs_limit_force, 100.0)
+    wait(abs_limit_force, STOP_FORCE)
 
     # Stop camera timelapse
     camera_1_stop_timelapse()
